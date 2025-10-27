@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MISA：AIエージェント研修 レポート</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; color: #333; line-height: 1.6; font-size: 1.05em; }
+        .container { max-width: 1000px; margin: 20px auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
+        header { background-color: #2c3e50; color: #ecf0f1; padding: 25px 30px; text-align: center; border-bottom: 5px solid #3498db; }
+        header h1 { margin: 0; font-size: 2.5em; }
+        .tab-list { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; background-color: #34495e; border-bottom: 1px solid #2c3e50; }
+        .tab-list button {
+            background-color: #34495e; color: #ecf0f1; border: none; padding: 15px 25px; cursor: pointer;
+            font-size: 1.1em; transition: background-color 0.3s, color 0.3s; white-space: nowrap;
+            flex-shrink: 0; /* Prevent tabs from shrinking */
+        }
+        .tab-list button:hover { background-color: #4a627a; }
+        .tab-list button[aria-selected="true"] { background-color: #3498db; color: #fff; font-weight: bold; }
+        .tab-panel { padding: 30px; display: none; }
+        .tab-panel.active { display: block; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; font-size: 2em; }
+        h3 { color: #3498db; margin-top: 25px; font-size: 1.5em; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-top: 30px; }
+        .card { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card h4 { color: #2c3e50; margin-top: 0; font-size: 1.3em; }
+        .card ul { list-style-type: disc; margin-left: 20px; padding-left: 0; }
+        .card li { margin-bottom: 5px; }
+        .button { display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-top: 15px; transition: background-color 0.3s; }
+        .button:hover { background-color: #2980b9; }
+        pre { background-color: #eee; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+        code { font-family: 'Consolas', 'Monaco', monospace; color: #c0392b; font-size: 0.95em; }
+        .learning-map {
+            display: flex;
+            justify-content: center;
+            align-items: stretch; /* Stretch items to equal height */
+            flex-wrap: wrap;
+            margin: 40px 0;
+            padding: 20px 10px; /* Adjust padding */
+            background-color: #f8f8f8; /* Lighter background */
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            gap: 20px; /* Gap between items */
+        }
+        .learning-map span {
+            position: relative;
+            flex: 1; /* Allow items to grow and shrink */
+            min-width: 180px; /* Minimum width for each box */
+            max-width: 220px; /* Maximum width for each box */
+            background-color: #3498db;
+            color: #fff;
+            padding: 15px 20px; /* Increased padding */
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: center;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+            transition: transform 0.2s, background-color 0.3s;
+            display: flex; /* Use flex for content alignment */
+            align-items: center;
+            justify-content: center;
+            line-height: 1.4; /* Improve readability */
+        }
+        .learning-map span:hover {
+            transform: translateY(-5px); /* More pronounced hover effect */
+            background-color: #2980b9;
+        }
+        .learning-map span:not(:last-child)::after {
+            content: '→'; /* Use a simple arrow character */
+            position: absolute;
+            right: -25px; /* Position the arrow between boxes */
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em; /* Larger arrow */
+            color: #333; /* Darker arrow color */
+            z-index: 1;
+            pointer-events: none; /* Ensure it doesn't interfere with clicks */
+        }
+        .learning-map span:not(:last-child)::before { /* Remove the line, rely on arrow character */
+            content: none;
+        }
+        /* Adjust for wrapping on small screens */
+        @media (max-width: 768px) {
+            .learning-map {
+                flex-direction: column;
+                align-items: center; /* Center items when stacked */
+            }
+            .learning-map span {
+                width: 80%; /* Make boxes wider on small screens */
+                max-width: 300px; /* Limit max width */
+                margin: 10px 0; /* Adjust margin */
+            }
+            .learning-map span:not(:last-child)::after {
+                right: auto;
+                bottom: -35px; /* Position below the box */
+                left: 50%;
+                top: auto;
+                transform: translateX(-50%) rotate(90deg); /* Rotate arrow downwards */
+                font-size: 2.5em; /* Even larger arrow for stacked */
+            }
+        }
+        .footer { text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #eee; color: #777; font-size: 0.9em; }
+        .footer a { color: #3498db; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .note { background-color: #fcf8e3; border: 1px solid #fbeed5; color: #c09853; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .terminology-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .terminology-item { background-color: #e0f7fa; color: #00796b; padding: 8px 12px; border-radius: 20px; font-size: 0.9em; white-space: nowrap; }
+
+        /* Print styles */
+        @media print {
+            .tab-list, .footer a[href="#home"] { display: none; }
+            .tab-panel { display: block !important; page-break-after: always; }
+            .tab-panel h2 { page-break-before: always; }
+            .tab-panel:not(#home) .summary-only { display: block; } /* Show only summary for print */
+            .tab-panel:not(#home) *:not(.summary-only):not(h2):not(h3) { display: none; } /* Hide details for print */
+            #home .card-grid, #home .learning-map { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MISA：AIエージェント研修 レポート</h1>
+        </header>
+
+        <nav class="tab-list" role="tablist">
+            <button id="tab-home" role="tab" aria-controls="home" aria-selected="true">Home</button>
+            <button id="tab-s1" role="tab" aria-controls="s1" aria-selected="false">第1回</button>
+            <button id="tab-s2" role="tab" aria-controls="s2" aria-selected="false">第2回</button>
+            <button id="tab-s3" role="tab" aria-controls="s3" aria-selected="false">第3回</button>
+            <button id="tab-s4" role="tab" aria-controls="s4" aria-selected="false">第4回</button>
+        </nav>
+
+        <main>
+            <section id="home" class="tab-panel active" role="tabpanel" aria-labelledby="tab-home">
+                <h2>研修概要</h2>
+                <p>本研修は、MISAにおけるDX人材育成の一環として、AIエージェントの基礎から実践的な活用までを学ぶことを目的としています。コマンドライン操作やGitHubを用いた基本的な開発環境の構築から始まり、AIを活用したアプリケーションの作成と公開、さらには最新のModel Context Protocol (MCP) の理解と利用を通じて、AIエージェントを効果的に業務へ導入するための知識とスキルを習得します。</p>
+                <p>各回は段階的に内容が深まる構成となっており、実践的な演習を通じて、AIエージェント開発に必要な一連のプロセスを体験できます。本レポートは、研修内容の要点をまとめ、社内での情報共有を促進することを目的としています。</p>
+
+                <h3>学習マップ</h3>
+                <div class="learning-map">
+                    <span>第1回: AIエージェントとツールの基本・GitHub</span>
+                    <span>第2回: Gemini CLIで業務効率化</span>
+                    <span>第3回: GitHub Pagesでデプロイ</span>
+                    <span>第4回: 業務効率化とMCP</span>
+                </div>
+
+                <h3>コマンド早見表（チートシート）</h3>
+                <p>このロードマップで登場する基本的なコマンドの一覧です。分からなくなったら、ここに戻って確認しましょう。</p>
+                <pre><code>
+コマンド                 何をするもの？
+--------------------------------------------------------------------------------
+cd                       現在の作業場所（ディレクトリ）を表示する
+cd [フォルダ名]          指定したフォルダに移動する（現在地を変更する）
+dir                      ファイルやフォルダの一覧を表示する
+mkdir [フォルダ名]       新しいフォルダ（ディレクトリ）を作成する
+echo [内容] > [ファイル名] テキストファイルを作成する
+type [ファイル名]        ファイルの中身を表示する
+git config --global ...  Gitの初期設定（ユーザー名、メールアドレス）
+git init                 現在のフォルダをGitで管理する（ローカルリポジトリの初期化）
+git remote add origin ... GitHub上のリポジトリとローカルを連携させる
+git add [ファイル名]     変更をGitの管理対象に追加する
+git commit -m "..."      変更内容を記録する（コミット）
+git push -u origin main  変更履歴をGitHubにアップロードする（最初のプッシュ）
+npm install -g @google/gemini-cli AIサポーター(Gemini)をPCにインストールする
+gemini                   AIサポーター(Gemini CLI)を起動して、対話を始める
+gemini prompt -m ...     AIに質問や指示を送る
+                </code></pre>
+
+                <h3>VS CodeとLive Serverでリアルタイムプレビュー！</h3>
+                <p>Visual Studio Codeの拡張機能「Live Server」を使うと、Webページのコード変更が即座にブラウザに反映され、開発効率が劇的に向上します。コードを書いて保存するたびに、自動でブラウザが更新されるため、試行錯誤の結果をすぐに確認できます。</p>
+                <p>詳しいインストール方法と使い方は、<a href="#s2">第2回セッション</a>の「手順/コマンド」セクションを参照してください。</p>
+
+                <h3>各回詳細</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h4>第1回：AIエージェントとは ／ ツールの基本とGitHub</h4>
+                        <p>AIエージェントの基本的な概念と、その基盤となるツールの使い方を学びます。コマンドラインインターフェースの重要性と効率的な利用方法、そしてGitHubを用いたバージョン管理の基礎を学ぶことで、今後のAIエージェント開発の土台を築くことを目標とします。</p>
+                        <ul>
+                            <li>AIエージェントの概要と役割</li>
+                            <li>基本的なツールの紹介と使い方</li>
+                            <li>コマンドラインインターフェースの活用と利点</li>
+                            <li>GitHubアカウントの作成とGitの基本操作</li>
+                            <li>開発環境のセットアップ</li>
+                        </ul>
+                        <p>所要時間目安: 3時間</p>
+                        <a href="#s1" class="button">詳細を見る</a>
+                    </div>
+                    <div class="card">
+                        <h4>第2回：Gemini CLI による業務効率化の実践</h4>
+                        <p>Gemini CLIを活用し、AIエージェントによる業務効率化の具体的な実践方法を学びます。プロンプトの作成から実行、結果の分析まで、一連のワークフローを体験します。</p>
+                        <ul>
+                            <li>Node.jsとVisual Studio Codeのセットアップ</li>
+                            <li>Gemini CLIのインストールと基本的な利用</li>
+                            <li>効果的なプロンプトの設計と活用</li>
+                            <li>AIエージェントによる業務効率化の具体例</li>
+                        </ul>
+                        <p>所要時間目安: 3時間</p>
+                        <a href="#s2" class="button">詳細を見る</a>
+                    </div>
+                    <div class="card">
+                        <h4>第3回：GitHub Pagesによるデプロイ ／ PC操作効率化</h4>
+                        <p>GitHub Pagesを利用したウェブサイトの公開方法と、日常のPC操作を効率化するためのテクニックを学びます。AIエージェントの成果物を手軽に共有する手段と、作業効率向上のヒントを得ます。</p>
+                        <ul>
+                            <li>GitHub Pagesのセットアップと公開</li>
+                            <li>静的サイトジェネレーターの活用</li>
+                            <li>PC操作を効率化するコマンドやツール</li>
+                            <li>ショートカットキーの活用</li>
+                        </ul>
+                        <p>所要時間目安: 4時間</p>
+                        <a href="#s3" class="button">詳細を見る</a>
+                    </div>
+                    <div class="card">
+                        <h4>第4回：業務効率化アイデアの共有／MCP</h4>
+                        <p>これまでの研修で得た知識を活かし、業務効率化のための具体的なアイデアを共有します。また、AIエージェントの高度な活用に不可欠なModel Context Protocol (MCP) について理解を深めます。</p>
+                        <ul>
+                            <li>AIエージェント活用による業務改善事例</li>
+                            <li>チーム内でのアイデア共有とディスカッション</li>
+                            <li>Model Context Protocol (MCP) の詳細</li>
+                            <li>MCPを用いたAIエージェントのカスタマイズ</li>
+                        </ul>
+                        <p>所要時間目安: 4時間</p>
+                        <a href="#s4" class="button">詳細を見る</a>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <h3>注意</h3>
+                    <p>本レポートには、研修内容の要点のみを記載しています。パスワードやAPIキーなどの機密情報は含まれていません。これらの情報は社内メモを参照してください。</p>
+                </div>
+            </section>
+
+            <section id="s1" class="tab-panel" role="tabpanel" aria-labelledby="tab-s1">
+                <h2>第1回：AIエージェントとは ／ ツールの基本とGitHub</h2>
+                <p class="summary-only">このセッションでは、AIエージェントの基本的な概念と、その基盤となるツールの使い方を学びました。コマンドラインインターフェースの重要性と効率的な利用方法を習得し、GitHubを用いたバージョン管理の基礎を学ぶことで、今後のAIエージェント開発の土台を築くことを目標とします。</p>
+                <h3>議事・ハイライト</h3>
+                <ul>
+                    <li>AIエージェントの定義と活用事例</li>
+                    <li>基本的な開発ツールの紹介（例: ターミナル、エディタ）</li>
+                    <li>コマンドライン操作の基礎と利点</li>
+                    <li>GitHubアカウントの作成とGitの基本操作</li>
+                    <li>開発環境のセットアップと初期設定</li>
+                    <li>AIエージェント開発におけるツールの役割</li>
+                </ul>
+                <h3>手順/コマンド</h3>
+                <pre><code>
+
+# コマンドプロンプトの利点と使い方
+# コマンドプロンプトは、キーボード入力だけでPCを操作できる強力なツールです。マウス操作よりも高速で、繰り返し作業の自動化にも向いています。AIエージェント開発では、ツールの実行やファイルの管理など、様々な場面で活用します。
+
+# コマンドプロンプトの起動方法:
+# Windowsキー + R を押し、「cmd」と入力してEnterキーを押してください。
+
+# 基本コマンド一覧
+# --------------------------------------------------------------------------------
+# 1. 現在の作業ディレクトリを表示 (今、自分がPCのどこにいるかを確認)
+#    コマンド: cd
+#    例: cd
+# --------------------------------------------------------------------------------
+# 2. ディレクトリを移動する (作業場所を変更する)
+#    コマンド: cd [移動したいディレクトリのパス]
+#    例: cd C:\Users\YourUser\Documents
+# --------------------------------------------------------------------------------
+# 3. ファイルやフォルダの一覧を表示する (現在のディレクトリにあるものを見る)
+#    コマンド: dir
+#    例: dir
+# --------------------------------------------------------------------------------
+# 4. 新しいフォルダを作成する
+#    コマンド: mkdir [作成したいフォルダ名]
+#    例: mkdir MyProject
+# --------------------------------------------------------------------------------
+# 5. テキストファイルを作成する
+#    コマンド: echo [書き込みたい内容] > [ファイル名]
+#    例: echo Hello World! > hello.txt
+# --------------------------------------------------------------------------------
+# 6. テキストファイルの内容を表示する
+#    コマンド: type [ファイル名]
+#    例: type hello.txt
+# --------------------------------------------------------------------------------
+
+# GitHubのセットアップと基本操作
+# GitHubは、あなたの作ったプログラムのコードやファイルをインターネット上で管理・共有するための「開発者のためのSNS」のようなものです。チームでの共同開発や、自分のプロジェクトの変更履歴を自動で記録するのに非常に役立ちます。
+
+# 1. GitHubアカウントの作成とログイン
+#    まだアカウントがない場合:
+#    GitHub公式サイト (https://github.com/) にアクセスし、「Sign up」ボタンから画面の指示に従ってアカウントを作成してください。
+#    アカウント作成後:
+#    GitHub公式サイト (https://github.com/) にアクセスし、「Sign in」から作成したアカウントでログインしてください。
+
+# 2. Gitのインストール
+#    Gitは、ファイルの変更履歴を管理するためのツールです。GitHubと連携して使います。あなたのPCにGitをインストールしましょう。
+#    Git for Windows公式サイト (https://gitforwindows.org/) にアクセスし、インストーラーをダウンロード・実行してください。インストールは基本的に「Next」を押し続けるだけでOKです。
+
+# 3. Gitの初期設定 (コマンドプロンプトで実行)
+#    Gitをインストールしたら、まずあなたのPCでGitを使うための初期設定を行います。コマンドプロンプトを開いて、以下のコマンドを一つずつ実行してください。
+#    ここで設定するユーザー名とメールアドレスは、あなたがGitHubにアップロードする変更履歴に「誰が変更したか」を記録するために使われます。
+#    git config --global user.name "あなたのGitHubユーザー名"  (例: "your-username")
+#    git config --global user.email "あなたのGitHub登録メールアドレス" (例: "your.email@example.com")
+
+# 4. 新しいリポジトリの作成 (GitHub上)
+#    GitHubにログインした状態で、新しいプロジェクトの「保管場所（リポジトリ）」を作成します。
+#    a. GitHubの画面右上にある「+」アイコンをクリックし、「New repository」を選択します。
+#    b. 「Repository name」にプロジェクトの名前（例: `my-first-repo`）を入力します。
+#    c. 「Public」（公開）または「Private」（非公開）を選択します。最初は「Public」で問題ありません。
+#    d. **重要:** 「Add a README file」や「Add .gitignore」などのチェックボックスは**すべてチェックを外してください**。これらは後でローカルで作成します。
+#    e. 「Create repository」ボタンをクリックします。
+#    f. 作成されたリポジトリのページに表示される「...or create a new repository on the command line」の下にあるURL（例: `https://github.com/あなたのユーザー名/あなたのリポジトリ名.git`）をコピーしておきましょう。
+
+# 5. ローカルリポジトリの作成とGitHubへの連携 (コマンドプロンプトで実行)
+#    あなたのPC上にプロジェクト用のフォルダを作成し、そのフォルダをGitで管理できるようにします。そして、先ほどGitHubで作成したリポジトリと連携させます。
+#    a. コマンドプロンプトで、プロジェクトを作成したい場所（例: `C:\Users\YourUser\Documents`）に移動します。
+#    b. 新しいプロジェクトフォルダを作成し、その中に移動します。
+#       mkdir MyNewProject
+#       cd MyNewProject
+#    c. このフォルダをGitで管理するための初期化を行います。
+#       git init
+#    d. ローカルのフォルダとGitHub上のリポジトリを連携させます。「origin」はGitHub上のリポジトリを指す「ニックネーム」のようなものです。
+#       git remote add origin コピーしたリポジトリのURL (例: `https://github.com/あなたのユーザー名/あなたのリポジトリ名.git`)
+
+# 6. ファイルの追加とコミット (変更履歴の記録)
+#    プロジェクトフォルダにファイルを作成・編集した後、その変更をGitに記録します。Gitでは、変更を「コミット」という単位で記録します。
+#    a. まず、簡単なファイルを作成してみましょう。
+#       echo # My First Project > README.md
+#    b. 作成したファイルをGitの管理対象に追加します。
+#       git add README.md
+#    c. 変更内容を記録します。`-m`の後に、その変更がどんな内容だったかを分かりやすく記述します。
+#       git commit -m "Initial commit: Add README file"
+
+# 7. GitHubへのプッシュ (変更をGitHubにアップロード)
+#    ローカルで記録した変更履歴を、GitHub上のリポジトリにアップロードします。これにより、他の人と共有したり、PCが壊れても履歴が残るようになります。
+#    a. 最初のプッシュでは、`-u origin main`というオプションをつけます。これは「今後、このローカルの`main`ブランチはGitHubの`origin`という名前のリポジトリの`main`ブランチと連携するよ」という設定を意味します。
+#       git push -u origin main
+#    b. 2回目以降のプッシュは、`git push`だけでOKです。
+                </code></pre>
+                <h3>用語メモ</h3>
+                <div class="terminology-list">
+                    <span class="terminology-item">AIエージェント</span>
+                    <span class="terminology-item">CLI</span>
+                    <span class="terminology-item">IDE</span>
+                    <span class="terminology-item">コマンド</span>
+                    <span class="terminology-item">ディレクトリ</span>
+                    <span class="terminology-item">ファイル</span>
+                    <span class="terminology-item">Git</span>
+                    <span class="terminology-item">GitHub</span>
+                    <span class="terminology-item">リポジトリ</span>
+                </div>
+                <h3>宿題/次回までのタスク</h3>
+                <ul>
+                    <li>基本的なコマンドライン操作に慣れる。</li>
+                    <li>コマンドプロンプトを使ってファイルやフォルダの作成・移動・表示を試してみる。</li>
+                    <li>GitHubアカウントを作成し、簡単なリポジトリを作成してみる。</li>
+                    <li>**演習:** 新しいフォルダを作成し、その中にテキストファイルを作成後、GitHubにプッシュしてみましょう。</li>
+                </ul>
+                <h3>参考リンク</h3>
+                <ul>
+                    <li><a href="https://code.visualstudio.com/" target="_blank">Visual Studio Code公式サイト</a></li>
+                    <li><a href="https://github.com/" target="_blank">GitHub公式サイト</a></li>
+                    <li><a href="https://gitforwindows.org/" target="_blank">Git for Windows公式サイト</a></li>
+                    <li><a href="https://docs.github.com/ja/get-started/getting-started-with-git/managing-remote-repositories" target="_blank">GitHubへのプッシュ（コマンドライン）</a></li>
+                    <li><a href="https://code.visualstudio.com/docs/introvideos/basics" target="_blank">VS Code入門 (公式ビデオ)</a></li>
+                </ul>
+                <div class="footer"><a href="#home">Homeへ戻る</a></div>
+            </section>
+
+            <section id="s2" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2">
+                <h2>第2回：Gemini CLI による業務効率化の実践</h2>
+                <p class="summary-only">このセッションでは、まずNode.jsとVisual Studio Codeといった基本的な開発環境のセットアップから始め、Gemini CLIをインストールしてAIエージェントとの対話を通じて業務効率化を実践する方法を学びました。プロンプトの設計、APIキーの安全な管理、そしてAIとの連携による具体的なタスク処理まで、一連のプロセスを体験することを目的とします。</p>
+                <p>※本セッションの主要な資料（.docxファイル）は読み込み不可のため、内容はファイル名とテーマからの推測を含みます。</p>
+                <h3>議事・ハイライト</h3>
+                <ul>
+                    <li>Node.jsとVisual Studio Codeのインストールとセットアップ</li>
+                    <li>`npm`を用いたGemini CLIのインストールと認証設定</li>
+                    <li>基本的なプロンプトの構造と書き方</li>
+                    <li>AIエージェントによるテキスト生成、要約、翻訳</li>
+                    <li>業務シナリオに合わせたプロンプトの調整と活用方法</li>
+                </ul>
+                <h3>手順/コマンド</h3>
+                <pre><code>
+
+
+# Live Server (VS Code拡張機能) のインストールとプレビュー:
+# VS Codeの拡張機能「Live Server」を使うと、コードの変更を即座にブラウザに反映させることができ、開発効率が劇的に向上します。画像や動画での説明はできませんが、以下にその手順を詳しく解説します。
+
+# ステップA：Live Serverのインストール（初回のみ）
+# 1. VS Codeの左側にある四角が4つ並んだアイコン（拡張機能ビュー）をクリックします。
+# 2. 上部の検索バーに Live Server と入力します。
+# 3. 検索結果に表示された「Live Server」（作者: Ritwick Dey）の「インストール」ボタンをクリックします。
+#
+# +---------------------------------+
+# | 拡張機能: マーケットプレイス    |
+# |---------------------------------|
+# |  [ Live Server           ] 検索 |
+# |---------------------------------|
+# | ▲ Live Server                   |
+# |   作者: Ritwick Dey             |
+# |   [インストール] ← これをクリック |
+# +---------------------------------+
+#
+# ステップB：Live Serverの起動とプレビュー
+# 1. VS CodeでプレビューしたいHTMLファイル（例: profile.html）を開きます。
+# 2. 起動方法は2つあります。好きな方を選んでください。
+#    * 方法1：右クリックメニュー
+#      コード編集エリアで右クリックし、表示されたメニューから「Open with Live Server」を選択します。
+#    * 方法2：ステータスバーのボタン
+#      VS Codeのウィンドウ右下にある青いステータスバーに「Go Live」というボタンがあります。これをクリックします。
+#
+#      +------------------------------------------------------------------+
+#      | ... (あなたのコード) ...                                         |
+#      +------------------------------------------------------------------+
+#      | ...                                     [ Go Live ] ← これをクリック |
+#      +------------------------------------------------------------------+
+#
+# 3. クリックすると、自動的に既定のブラウザが起動し、あなたのHTMLページが表示されます。
+#
+# ステップC：リアルタイム更新の確認
+# 1. ブラウザでページが表示されたら、VS Codeに戻ってHTMLファイルを編集してみましょう。（例：<h1>タグの中のテキストを変更してみる）
+# 2. ファイルを保存（Ctrl + S または Cmd + S）します。
+# 3. ブラウザを確認すると、ページが自動的にリロードされ、変更が反映されているはずです。
+
+</code></pre>
+                <h3>用語メモ</h3>
+                <div class="terminology-list">
+                    <span class="terminology-item">Node.js</span>
+                    <span class="terminology-item">npm</span>
+                    <span class="terminology-item">Gemini CLI</span>
+                    <span class="terminology-item">プロンプト</span>
+                    <span class="terminology-item">APIキー</span>
+                    <span class="terminology-item">モデル</span>
+                    <span class="terminology-item">トークン</span>
+                    <span class="terminology-item">コンテキスト</span>
+                </div>
+                <h3>宿題/次回までのタスク</h3>
+                <ul>
+                    <li>Gemini CLIをインストールし、基本的なプロンプトを実行してみる。</li>
+                    <li>自身の業務に関連する簡単なタスクをAIエージェントに依頼し、その結果を評価する。</li>
+                    <li>**演習:** Gemini CLIを使って、今日のニュース記事の要約をAIに依頼してみましょう。</li>
+                </ul>
+                <h3>参考リンク</h3>
+                <ul>
+                    <li><a href="https://nodejs.org/ja/" target="_blank">Node.js公式サイト</a></li>
+                    <li><a href="https://code.visualstudio.com/" target="_blank">Visual Studio Code公式サイト</a></li>
+                </ul>
+                <div class="note">
+                    <p>パスワードは社内メモ参照</p>
+                </div>
+                <div class="footer"><a href="#home">Homeへ戻る</a></div>
+            </section>
+
+            <section id="s3" class="tab-panel" role="tabpanel" aria-labelledby="tab-s3">
+                <h2>第3回：GitHub Pagesによるデプロイ ／ PC操作効率化</h2>
+                <p class="summary-only">このセッションでは、GitHub Pagesを利用して作成したウェブサイトやAIエージェントの成果物を公開する方法を学びました。また、日常のPC操作を効率化するための様々なテクニックやツールを紹介し、作業効率の向上を目指しました。</p>
+                <h3>議事・ハイライト</h3>
+                <ul>
+                    <li>GitHubリポジトリとGitHub Pagesの連携設定</li>
+                    <li>静的サイトの作成とデプロイ手順</li>
+                    <li>PC操作を高速化するコマンドプロンプトの活用術</li>
+                    <li>Windowsのショートカットキーや便利ツールの紹介</li>
+                    <li>AIエージェントの出力結果をウェブで共有する方法</li>
+                </ul>
+                <h3>手順/コマンド</h3>
+                <pre><code>
+# GitHub Pagesの有効化 (リポジトリ設定から)
+# リポジトリのルートに index.html を配置
+
+# (例: Gitで変更をプッシュ)
+git add .
+git commit -m "Update for GitHub Pages"
+git push origin main
+
+# (例: よく使うコマンド)
+# explorer . (現在のフォルダをエクスプローラーで開く)
+# code . (VS Codeで現在のフォルダを開く)
+# ipconfig (IPアドレスの確認)
+                </code></pre>
+                <h3>用語メモ</h3>
+                <div class="terminology-list">
+                    <span class="terminology-item">GitHub Pages</span>
+                    <span class="terminology-item">静的サイト</span>
+                    <span class="terminology-item">デプロイ</span>
+                    <span class="terminology-item">ショートカット</span>
+                    <span class="terminology-item">CLI</span>
+                    <span class="terminology-item">効率化</span>
+                </div>
+                <h3>宿題/次回までのタスク</h3>
+                <ul>
+
+                    <li>GitHub Pagesを使って簡単なウェブページを公開してみる。</li>
+                    <li>日常業務でよく使うPC操作を効率化するコマンドやショートカットを探し、実践する。</li>
+                    <li>**演習:** GitHub Pagesで簡単な自己紹介ページを作成し、公開してみましょう。</li>
+                </ul>
+                <h3>参考リンク</h3>
+                <ul>
+                    <li><a href="https://docs.github.com/ja/pages" target="_blank">GitHub Pages ドキュメント</a></li>
+
+                </ul>
+                <div class="note">
+                    <p>パスワードは社内メモ参照</p>
+                </div>
+                <div class="footer"><a href="#home">Homeへ戻る</a></div>
+            </section>
+
+            <section id="s4" class="tab-panel" role="tabpanel" aria-labelledby="tab-s4">
+                <h2>第4回：業務効率化アイデアの共有／MCP</h2>
+                <p class="summary-only">このセッションでは、これまでの研修で学んだAIエージェントの知識を基に、参加者間で業務効率化のための具体的なアイデアを共有しました。さらに、AIエージェントのより高度な活用に不可欠なModel Context Protocol (MCP) について深く理解し、その実践的な使い方を学びました。</p>
+                <h3>議事・ハイライト</h3>
+                <ul>
+                    <li>AIエージェント導入による業務改善の成功事例</li>
+                    <li>参加者からの業務効率化アイデア発表とフィードバック</li>
+                    <li>Model Context Protocol (MCP) のアーキテクチャと機能</li>
+                    <li>MCPを用いたAIエージェントの振る舞い制御</li>
+                    <li>`settings.json` を活用したMCP設定のカスタマイズ</li>
+                    <li>AIエージェントのデータプライバシーとセキュリティに関する考慮事項</li>
+                </ul>
+                <h3>手順/コマンド</h3>
+                <pre><code>
+# (Gemini CLIのインストールが必要な場合)
+# 第2回「Gemini CLI による業務効率化の実践」の「手順/コマンド」を参照してください。
+
+# (例: 業務効率化アイデアの発表)
+# プレゼンテーション資料の準備
+
+# (例: MCP設定ファイルの編集)
+# settings.json をテキストエディタで開く
+
+# (例: Gemini CLIでのMCP適用)
+gemini prompt -m gemini-1.5-pro-latest --settings_file settings.json "今日のタスクをMCPの指示に従って整理して"
+
+# (例: Tavilyでの情報収集)
+# tavily search "最新の業務効率化ツール"
+                </code></pre>
+                <h3>用語メモ</h3>
+                <div class="terminology-list">
+                    <span class="terminology-item">業務効率化</span>
+                    <span class="terminology-item">アイデアソン</span>
+                    <span class="terminology-item">MCP</span>
+                    <span class="terminology-item">コンテキスト</span>
+                    <span class="terminology-item">設定ファイル</span>
+                    <span class="terminology-item">プライバシー</span>
+                </div>
+                <h3>宿題/次回までのタスク</h3>
+                <ul>
+                    <li>自身の業務における非効率な点を特定し、AIエージェントで解決できるアイデアを具体化する。</li>
+                    <li>MCPの概念を理解し、AIエージェントの振る舞いを制御するための設定を試行する。</li>
+                    <li>**演習:** 自身の業務課題を一つ選び、AIエージェントを活用した解決策のアイデアを具体的に考えてみましょう。</li>
+                </ul>
+                <h3>参考リンク</h3>
+                <ul>
+                    <li><a href="https://ai.google.dev/" target="_blank">Google AI for Developers</a></li>
+                    <li><a href="https://tavily.com/" target="_blank">Tavily (公式 - 英語サイト)</a></li>
+                    <li>Gemini CLIのプライバシー設定は、`settings.json`ファイルで`"usageStatisticsEnabled": false`を設定することで調整可能です。（詳細は<a href="https://ai.google.dev/" target="_blank">Google AI for Developers</a>を参照）</li>
+                </ul>
+                <div class="footer"><a href="#home">Homeへ戻る</a></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-list button');
+            const panels = document.querySelectorAll('.tab-panel');
+
+            function showPanel(panelId) {
+                tabs.forEach(tab => {
+                    tab.setAttribute('aria-selected', 'false');
+                    tab.classList.remove('active');
+                });
+                panels.forEach(panel => panel.classList.remove('active'));
+
+                const selectedTab = document.querySelector(`[aria-controls="${panelId}"]`);
+                if (selectedTab) {
+                    selectedTab.setAttribute('aria-selected', 'true');
+                    selectedTab.classList.add('active');
+                }
+                const selectedPanel = document.getElementById(panelId);
+                if (selectedPanel) {
+                    selectedPanel.classList.add('active');
+                }
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const panelId = e.target.getAttribute('aria-controls');
+                    window.location.hash = panelId;
+                });
+
+                tab.addEventListener('keydown', (e) => {
+                    let index = Array.from(tabs).indexOf(e.target);
+                    if (e.key === 'ArrowLeft') {
+                        index = (index - 1 + tabs.length) % tabs.length;
+                        tabs[index].focus();
+                    } else if (e.key === 'ArrowRight') {
+                        index = (index + 1) % tabs.length;
+                        tabs[index].focus();
+                    } else if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const panelId = e.target.getAttribute('aria-controls');
+                        window.location.hash = panelId;
+                    }
+                });
+            });
+
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.substring(1) || 'home';
+                showPanel(hash);
+            });
+
+            // Initial load
+            const initialHash = window.location.hash.substring(1) || 'home';
+            showPanel(initialHash);
+        });
+    </script>
+</body>
+</html>
